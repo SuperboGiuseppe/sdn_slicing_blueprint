@@ -11,3 +11,6 @@ The whole idea of slicing is that it allows multiple self-contained networks on 
 Model 
 In the model of the algorithm, the shared infrastructure is known as the Infrastructure provider (Inps). It provides resources to the tenants like mobile virtual network operators (MVNOs). This is a hierarchy-based system that provides the resources all the way down to the slices as you can see in the diagram.
 All the slices have their specific use cases and resources but they are not responsible for accepting any calls. In the model, the call refers to any connected device to the network or wanted to connect. But MVNO is taking care of accepting calls from different users with the help of the **call admission control algorithm** which is implemented on MVNO.
+
+# Algorithm implementations
+Basically the implementation of the algorithm consists of six classes: Simulator, Use Case, Slice, Slices, Intra Calculations, and InterCalation. which can be found in the code part.
