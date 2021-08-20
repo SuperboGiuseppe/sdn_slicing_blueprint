@@ -1,8 +1,16 @@
-# sdn_slicing_blueprint
+# SDN Slicing Blueprinting
 Softwarized and Virtualized mobile networks Project A.Y. 2020-21 - University of Trento
 
 # Short Summary of the project
-5g networks can be sliced into three major use cases. Enhanced Mobile Broadband (eMBB), Ultra-Reliable Low Latency Communication(uRLLC), Massive Machine Type Communication (mMTC) these slices are totally independent to provide users the best QoS and security. 5g network slices enable different opportunities for the different technologies to provide better services. For example, a software-defined network provides flexibility and affords the control with a global view of the entire network. It is also used to develop virtualized control plane which helps to fulfill the space between network management and service allocation using intelligent network management techniques.
+5g networks can be sliced into three major use cases which have different connectivity requirements: Enhanced Mobile Broadband (eMBB), Ultra-Reliable Low Latency Communication(uRLLC), Massive Machine Type Communication (mMTC). The goal of this project is to develop a blueprint from which it is possible to slice a predefined network depending on which applications are going to be deployed. These slices are totally independent to provide users the best QoS and security. 5g network slices enable different opportunities for the different technologies to provide better services. For example, a software-defined network provides flexibility and affords the control with a global view of the entire network. It is also used to develop virtualized control plane which helps to fulfill the space between network management and service allocation using intelligent network management techniques.
+
+
+
+
+
+
+
+
 Radio resource management helps to manage efficiently the radio resources in the wireless networks. There are different techniques: handover control, call admission control, scheduling and power control, etc.
 Handover control is defined as when a user moves from one coverage area to another, handover control makes sure that sure stays connected.
 There are many algorithms that help to improve handover control. but here we will talk about the specific one.

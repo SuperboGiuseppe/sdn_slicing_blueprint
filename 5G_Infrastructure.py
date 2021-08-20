@@ -8,16 +8,17 @@ from mininet.cli import CLI
 from mininet.link import TCLink
 
 
-class Mobile_Infrastructure(Topo):
+class MobileInfrastructure(Topo):
+
     #Initialize link types built from https://www.ericsson.com/en/reports-and-papers/white-papers/5g-wireless-access-an-overview
-    URLLC_user_plane_link_config = dict(jitter=1)
-    mMTC_user_plane_link_config = dict(jitter=1)
-    eMBB_user_plane_link_config = dict(jitter=4)
-    URLLC_control_plane_link_config = dict(jitter=1)
-    mMTC_control_plane_link_config = dict(jitter=1)
-    eMBB_control_plane_link_config = dict(jitter=10)
-    datacenters = []
-    users = []
+    #URLLC_user_plane_link_config = dict(jitter=1)
+    #mMTC_user_plane_link_config = dict(jitter=1)
+    #eMBB_user_plane_link_config = dict(jitter=4)
+    #URLLC_control_plane_link_config = dict(jitter=1)
+    #mMTC_control_plane_link_config = dict(jitter=1)
+    #eMBB_control_plane_link_config = dict(jitter=10)
+    #datacenters = []
+    #users = []
     
     def __init__(self, datacenters, users):
         #Initialize mininet topology
