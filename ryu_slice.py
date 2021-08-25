@@ -3,11 +3,15 @@ from ryu.controller import ofp_event
 from ryu.controller.handler import MAIN_DISPATCHER
 from ryu.controller.handler import set_ev_cls
 from ryu.ofproto import ofproto_v1_0
+from ryu import cfg
 
 from ryu.lib.mac import haddr_to_bin
 from ryu.lib.packet import packet
 from ryu.lib.packet import ethernet
+from ryu.lib.packet import arp
 from ryu.lib.packet import ether_types
+
+import random
 
 
 class DirectionSlicing(app_manager.RyuApp):
@@ -16,6 +20,12 @@ class DirectionSlicing(app_manager.RyuApp):
     def __init__(self, *args, **kwargs):
         super(DirectionSlicing, self).__init__(*args, **kwargs)
 
+        CONF = cfg.CONF
+        CONF.register_opts([
+            cfg.StrOpt('slice_configuration', default='EEE', help = ('Configuration of the slices'))
+        ])
+        self.slices = CONF.slice_configuration
+        #print(self.slices)
         # out_port = slice_to_port[dpid][in_port]
         #self.slice_to_port = {
         #    1: {3: 1, 2: 3, 1: 0},
@@ -24,49 +34,50 @@ class DirectionSlicing(app_manager.RyuApp):
         #    4: {3: 1, 1: 0, 2: 0, 4: 0},
         #}
         self.slice_to_port = {}
-}
-        #Switch links configuration
+        self.mac_to_port = {}
+
+        #Switches ports configuration
         for i in range(3):
-            if self.slices[i] == "E": #cambia la condizione!!!!
-                self.slice_to_port[(i+1)] =  {1: 2, 3: 1, 2: 0}
-                self.slice_to_port[(i+4)] =  {1: 2, 2: 0}
-                self.slice_to_port[(i+7)] =  {1: 2, 2: 0, 3: 0, 4: 0}
-                self.slice_to_port[(i+10)] = {1: 2, 2: 0}
-                self.slice_to_port[(i+13)] = {1 :2, 2: 0}
-                if i > 0:
-                    if self.slices[i] == self.slices[i-1]:
-                        self.slice_to_port[(i+4)] =  {1 :0, 2: 1, 4: 0, 3: 0}
-                        self.slice_to_port[(i+10)] = {1 :0, 2: 1, 4: 0, 3: 0}
-                    else:
-                        #non capisco l'utilità di questo else
-                        self.slice_to_port[(i+4)] =  {1 :0, 2: 1, 4: 0, 3: 0}
-                        self.slice_to_port[(i+10)] = {1 :0, 2: 1, 4: 0, 3: 0}
+            if self.slices[i] == "E":
+                self.slice_to_port[(i+1)] =  {1: 3, 2: 0, 3: 1}
+                self.slice_to_port[(i+4)] =  {1: 2, 2: 1, 3: 0, 4: 0}
+                self.slice_to_port[(i+7)] =  {1: 0, 2: 0, 3: 0, 4: 5, 5: 4}
+                self.slice_to_port[(i+10)] = {1: 2, 2: 1, 3: 0, 4: 0}
+                self.slice_to_port[(i+13)] = {1 :2, 2: 1}
+                if i > 0 and self.slices[i] == self.slices[i-1]:
+                    self.slice_to_port[(i+4)] =  {1 : [2, 3], 2: [1, 3], 4: 0 , 3: [2, 1]}
+                    self.slice_to_port[(i+6)] = {1 : [4, 5], 2 : 0, 4: [1, 5], 3: 0, 5: [4, 1]}
+                    self.slice_to_port[(i+7)] = {1 : [4, 5], 2 : 0, 4: [1, 5], 3: 0, 5: [4, 1]}
             if self.slices[i] == "M":
-                self.slice_to_port[(i+1)] =  {1: 2, 3: 1, 2: 0}
-                self.slice_to_port[(i+4)] =  {1: 2, 2: 0}
-                self.slice_to_port[(i+7)] =  {1: 2, 2: 0, 3: 0, 4: 0}
-                self.slice_to_port[(i+10)] = {1: 2, 2: 0}
-                self.slice_to_port[(i+13)] = {1 :2, 2: 0}
-                if i > 0:
-                    if self.slices[i] == self.slices[i-1]:
-                        self.slice_to_port[(i+4)] =  {1 :0, 2: 1, 4: 0, 3: 0}
-                        self.slice_to_port[(i+10)] = {1 :0, 2: 1, 4: 0, 3: 0}
-                    else:
-                        self.slice_to_port[(i+4)] =  {1 :0, 2: 1, 4: 0, 3: 0}
-                        self.slice_to_port[(i+10)] = {1 :0, 2: 1, 4: 0, 3: 0}
+                self.slice_to_port[(i+1)] =  {1: 3, 2: 0, 3: 1}
+                self.slice_to_port[(i+4)] =  {1: 2, 2: 1, 3: 0, 4: 0}
+                self.slice_to_port[(i+7)] =  {1: 0, 2: 0, 3: 4, 4: 3}
+                self.slice_to_port[(i+10)] = {1: 2, 2: 1, 3: 0, 4: 0}
+                self.slice_to_port[(i+13)] = {1 :0, 2: 3, 3: 2}
+                if i > 0 and self.slices[i] == self.slices[i-1]:
+                    self.slice_to_port[(i+10)] = {1:[2, 3], 2:[1, 3], 3:[1, 2], 4:0}
+                    self.slice_to_port[(i+12)] = {1: [2, 3], 2: [1, 3], 3: [1, 2]}
+                    self.slice_to_port[(i+13)] = {1: [2, 3], 2: [1, 3], 3: [1, 2]}
             if self.slices[i] == "U":
-                self.slice_to_port[(i+1)] =  {1: 2, 3: 1, 2: 0}
-                self.slice_to_port[(i+4)] =  {1: 2, 2: 0}
-                self.slice_to_port[(i+7)] =  {1: 2, 2: 0, 3: 0, 4: 0}
-                self.slice_to_port[(i+10)] = {1: 2, 2: 0}
+                self.slice_to_port[(i+1)] =  {1: 4, 2: 0, 3: 0, 4: 1}
+                self.slice_to_port[(i+4)] =  {1: 2, 2: 1, 3: 0, 4: 0}
+                self.slice_to_port[(i+7)] =  {1: 2, 2: 1, 3: 0, 4: 0}
+                self.slice_to_port[(i+10)] = {1: 2, 2: 1, 3: 0, 4: 0}
                 self.slice_to_port[(i+13)] = {1 :2, 2: 0} 
-                if i > 0:
-                    if self.slices[i] == self.slices[i-1]:
-                        self.slice_to_port[(i+4)] =  {1 :0, 2: 1, 4: 0, 3: 0}
-                        self.slice_to_port[(i+10)] = {1 :0, 2: 1, 4: 0, 3: 0}
-                    else:
-                        self.slice_to_port[(i+4)] =  {1 :0, 2: 1, 4: 0, 3: 0}
-                        self.slice_to_port[(i+10)] = {1 :0, 2: 1, 4: 0, 3: 0}
+                if i > 0 and self.slices[i] == self.slices[i-1]:
+                        self.slice_to_port[(i)] = {1: [2, 4, 3], 2: [3, 1, 4], 3: [1, 2, 4], 4: [1, 2, 3]}
+                        self.slice_to_port[(i+1)] = {1: [2, 4, 3], 2: [3, 1, 4], 3: [1, 2, 4], 4: [1, 2, 3]}
+                        self.slice_to_port[(i+4)] =  {1 : 4, 2: 0, 3: 0, 4: 1}
+                        
+        
+        #Base stations ports configuration
+        self.slice_to_port[16] = {1:2, 2:1}
+        self.slice_to_port[17] = {1:2, 2:1}
+        self.slice_to_port[18] = {1:2, 2:1}
+    
+
+    
+
 
     def add_flow(self, datapath, priority, match, actions):
         ofproto = datapath.ofproto
@@ -99,35 +110,53 @@ class DirectionSlicing(app_manager.RyuApp):
             actions=actions,
             data=data,
         )
-        # self.logger.info("send_msg %s", out)
+        #self.logger.info("send_msg %s", out)
         datapath.send_msg(out)
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
         msg = ev.msg
         datapath = msg.datapath
+        ofproto = datapath.ofproto
         in_port = msg.in_port
         dpid = datapath.id
 
         pkt = packet.Packet(msg.data)
-        eth = pkt.get_protocol(ethernet.ethernet)
+        pkt_eth = pkt.get_protocol(ethernet.ethernet)
+        #pkt_arp = pkt.get_protocol(arp.arp)
 
-        if eth.ethertype == ether_types.ETH_TYPE_LLDP:
+    
+
+        if pkt_eth.ethertype == ether_types.ETH_TYPE_LLDP:
             # ignore lldp packet
             # self.logger.info("LLDP packet discarded.")
             return
 
-        self.logger.info("INFO packet arrived in s%s (in_port=%s)", dpid, in_port)
+        
+        if isinstance(self.slice_to_port[dpid][in_port], list):
+            actions = []
+            for out_port in self.slice_to_port[dpid][in_port]:
+                actions.append(datapath.ofproto_parser.OFPActionOutput(out_port))
+            #actions = [datapath.ofproto_parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
+            match = datapath.ofproto_parser.OFPMatch(in_port=in_port)
+            #self.logger.info("INFO sending packet from s%s (out_port=%s)", dpid, out_port)
+            self.add_flow(datapath, 2, match, actions)
+            self._send_package(msg, datapath, in_port, actions)
+            return
+
+
+
+        #self.logger.info("INFO packet arrived in s%s (in_port=%s)", dpid, in_port)
         out_port = self.slice_to_port[dpid][in_port]
 
         if out_port == 0:
             # ignore handshake packet
             # self.logger.info("packet in s%s in_port=%s discarded.", dpid, in_port)
             return
+        
 
         actions = [datapath.ofproto_parser.OFPActionOutput(out_port)]
         match = datapath.ofproto_parser.OFPMatch(in_port=in_port)
-        self.logger.info("INFO sending packet from s%s (out_port=%s)", dpid, out_port)
-
+        #self.logger.info("INFO sending packet from s%s (out_port=%s)", dpid, out_port)
         self.add_flow(datapath, 2, match, actions)
         self._send_package(msg, datapath, in_port, actions)
