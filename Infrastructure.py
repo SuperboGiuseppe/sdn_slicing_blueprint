@@ -10,7 +10,7 @@ from mininet.node import Controller
 from mininet.node import OVSKernelSwitch, RemoteController
 from mininet.link import TCLink
 
-
+import json
 
 
 
@@ -24,11 +24,11 @@ class MobileInfrastructure(Topo):
 
         for i in range(15):
             sconfig = {"dpid": "%016x" % (i+1)}
-            self.addSwitch("Switch%d" % (i+1), protocols="OpenFlow13", **sconfig)
+            self.addSwitch("Switch%d" % (i+1), protocols="OpenFlow10", **sconfig)
         
         for i in range(3):
             sconfig = {"dpid": "%016x" % (i+15+1)}
-            self.addSwitch("BS%d" % (i+1), protocols="OpenFlow13", **sconfig)
+            self.addSwitch("BS%d" % (i+1), protocols="OpenFlow10", **sconfig)
         
         for i in range(3):
             self.addHost("Probe%d" % (i+1))
@@ -37,86 +37,134 @@ class MobileInfrastructure(Topo):
     
     def slice_configuration(self):
         #Initialize link types built from https://www.ericsson.com/en/reports-and-papers/white-papers/5g-wireless-access-an-overview
-        URLLC_user_plane_link_config = dict(delay=1, bw=10)
-        mMTC_user_plane_link_config = dict(delay=1, bw=20)
-        eMBB_user_plane_link_config = dict(delay=4, bw=30)
-        URLLC_control_plane_link_config = dict(delay=1, bw=10)
+        URLLC_user_plane_link_config = dict(bw=10)
+        mMTC_user_plane_link_config = dict(bw=10)
+        eMBB_user_plane_link_config = dict(bw=10)
+        URLLC_control_plane_link_config = dict(bw=10)
         #mMTC_control_plane_link_config = dict(delay=1)
-        eMBB_control_plane_link_config = dict(delay=10, bw=30)
+        eMBB_control_plane_link_config = dict(bw=10)
         #access_network_config = dict(delay=7, bw=30)
 
 
+        users_bs1 = 0
+        users_bs2 = 0
+        users_bs3 = 0
+
+
+        for k in self.users:
+            print(k)
+            if k.get('base_station') == 'BS1':
+                users_bs1 += 1
+                self.addHost(k.get("label"))
+                self.addLink(k.get("label"), 'BS1', 1, users_bs1, delay='1ms')
+            if k.get('base_station') == 'BS2':
+                users_bs2 += 1
+                self.addHost(k.get("label"))
+                self.addLink(k.get("label"), 'BS2', 1, users_bs2, delay='1ms')
+            if k.get('base_station') == 'BS3':
+                users_bs3 += 1
+                self.addHost(k.get("label"))
+                self.addLink(k.get("label"), 'BS3', 1, users_bs3, delay='1ms')
+        """   
+        for k in self.users:
+            if k.get('base_station') == 'BS1':
+                temp_bs1 += 1
+                self.addLink(k.get("label"), 'BS1', temp_bs1, users_bs1+1, delay='1ms')
+            if k.get('base_station') == 'BS2':
+                temp_bs2 += 1
+                self.addLink(k.get("label"), 'BS2', temp_bs2, users_bs2+1, delay='1ms')
+            if k.get('base_station') == 'BS3':
+                temp_bs3 += 1
+                self.addLink(k.get("label"), 'BS3', temp_bs3, users_bs3+1, delay='1ms')
+
+        
+        print(user_bs)
+        """
+        user_bs = [users_bs1, users_bs2, users_bs3]
         #Switch links configuration
         for i in range(3):
             if self.slices[i] == "E":
-                self.addLink("BS"+str(i+1), "Switch"+str(i+1), 2, 1, **eMBB_user_plane_link_config)
-                self.addLink("Switch"+str(i+1), "Switch"+str(i+4), 3, 1, **eMBB_user_plane_link_config)
-                self.addLink("Switch"+str(i+4), "Switch"+str(i+7), 2, 4, **eMBB_user_plane_link_config)
-                self.addLink("Switch"+str(i+7), "Switch"+str(i+10), 3, 1, **eMBB_control_plane_link_config)
-                self.addLink("Switch"+str(i+10), "Switch"+str(i+13), 2, 2, **eMBB_control_plane_link_config)
-                self.addLink("Switch"+str(i+7), "Probe"+str(i+1), 5, 1, **eMBB_user_plane_link_config)
+                self.addLink("BS"+str(i+1), "Switch"+str(i+1), user_bs[i]+1, 1, **eMBB_user_plane_link_config, delay='10ms')
+                self.addLink("Switch"+str(i+1), "Switch"+str(i+4), 3, 1, **eMBB_user_plane_link_config, delay='10ms')
+                self.addLink("Switch"+str(i+4), "Switch"+str(i+7), 2, 4, **eMBB_user_plane_link_config, delay='10ms')
+                self.addLink("Switch"+str(i+7), "Switch"+str(i+10), 3, 1, **eMBB_control_plane_link_config, delay='10ms')
+                self.addLink("Switch"+str(i+10), "Switch"+str(i+13), 2, 2, **eMBB_control_plane_link_config, delay='10ms')
+                self.addLink("Switch"+str(i+7), "Probe"+str(i+1), 5, 1, **eMBB_user_plane_link_config, delay='2ms')
                 if i > 0:
                     if self.slices[i] == self.slices[i-1]:
-                        self.addLink("Switch"+str(i+4), "Switch"+str(i), 4, 2, **eMBB_user_plane_link_config)
-                        self.addLink("Switch"+str(i+4), "Switch"+str(i+6), 3, 1, **eMBB_user_plane_link_config)
-                        self.addLink("Switch"+str(i+10), "Switch"+str(i+6), 4, 2, **eMBB_control_plane_link_config)
-                        self.addLink("Switch"+str(i+10), "Switch"+str(i+12), 3, 1,**eMBB_control_plane_link_config)
+                        self.addLink("Switch"+str(i+4), "Switch"+str(i), 4, 2, **eMBB_user_plane_link_config, delay='10ms')
+                        self.addLink("Switch"+str(i+4), "Switch"+str(i+6), 3, 1, **eMBB_user_plane_link_config, delay='10ms')
+                        self.addLink("Switch"+str(i+10), "Switch"+str(i+6), 4, 2, **eMBB_control_plane_link_config, delay='10ms')
+                        self.addLink("Switch"+str(i+10), "Switch"+str(i+12), 3, 1,**eMBB_control_plane_link_config, delay='10ms')
                     else:
                         self.addLink("Switch"+str(i+4), "Switch"+str(i), 4, 2)
                         self.addLink("Switch"+str(i+4), "Switch"+str(i+6), 3, 1)
                         self.addLink("Switch"+str(i+10), "Switch"+str(i+6), 4, 2)
                         self.addLink("Switch"+str(i+10), "Switch"+str(i+12), 3, 1)
             if self.slices[i] == "M":
-                self.addLink("BS"+str(i+1), "Switch"+str(i+1), 2, 1, **mMTC_user_plane_link_config)
-                self.addLink("Switch"+str(i+1), "Switch"+str(i+4), 3, 1, **mMTC_user_plane_link_config)
-                self.addLink("Switch"+str(i+4), "Switch"+str(i+7), 2, 4, **mMTC_user_plane_link_config)
-                self.addLink("Switch"+str(i+7), "Switch"+str(i+10), 3, 1, **mMTC_user_plane_link_config)
-                self.addLink("Switch"+str(i+10), "Switch"+str(i+13), 2, 2,  **mMTC_user_plane_link_config)
-                self.addLink("Switch"+str(i+13), "Probe"+str(i+1), 3, 1, **mMTC_user_plane_link_config)
+                self.addLink("BS"+str(i+1), "Switch"+str(i+1), user_bs[i]+1, 1, **mMTC_user_plane_link_config, delay='10ms')
+                self.addLink("Switch"+str(i+1), "Switch"+str(i+4), 3, 1, **mMTC_user_plane_link_config, delay='10ms')
+                self.addLink("Switch"+str(i+4), "Switch"+str(i+7), 2, 4, **mMTC_user_plane_link_config, delay='10ms')
+                self.addLink("Switch"+str(i+7), "Switch"+str(i+10), 3, 1, **mMTC_user_plane_link_config, delay='10ms')
+                self.addLink("Switch"+str(i+10), "Switch"+str(i+13), 2, 2,  **mMTC_user_plane_link_config, delay='10ms')
+                self.addLink("Switch"+str(i+13), "Probe"+str(i+1), 3, 1, **mMTC_user_plane_link_config, delay='2ms')
                 if i > 0:
                     if self.slices[i] == self.slices[i-1]:
-                        self.addLink("Switch"+str(i+4), "Switch"+str(i), 4, 2, **mMTC_user_plane_link_config)
-                        self.addLink("Switch"+str(i+4), "Switch"+str(i+6), 3, 1, **mMTC_user_plane_link_config)
-                        self.addLink("Switch"+str(i+10), "Switch"+str(i+6), 4, 2, **mMTC_user_plane_link_config)
-                        self.addLink("Switch"+str(i+10), "Switch"+str(i+12), 3, 1, **mMTC_user_plane_link_config)
+                        self.addLink("Switch"+str(i+4), "Switch"+str(i), 4, 2, **mMTC_user_plane_link_config, delay='10ms')
+                        self.addLink("Switch"+str(i+4), "Switch"+str(i+6), 3, 1, **mMTC_user_plane_link_config, delay='10ms')
+                        self.addLink("Switch"+str(i+10), "Switch"+str(i+6), 4, 2, **mMTC_user_plane_link_config, delay='10ms')
+                        self.addLink("Switch"+str(i+10), "Switch"+str(i+12), 3, 1, **mMTC_user_plane_link_config, delay='10ms')
                     else:
                         self.addLink("Switch"+str(i+4), "Switch"+str(i), 4, 2)
                         self.addLink("Switch"+str(i+4), "Switch"+str(i+6), 3, 1)
                         self.addLink("Switch"+str(i+10), "Switch"+str(i+6), 4, 2)
                         self.addLink("Switch"+str(i+10), "Switch"+str(i+12), 3, 1)
             if self.slices[i] == "U":
-                self.addLink("BS"+str(i+1), "Switch"+str(i+1), 2, 1, **URLLC_user_plane_link_config)
-                self.addLink("Switch"+str(i+1), "Switch"+str(i+4), 3, 1, **URLLC_user_plane_link_config)
-                self.addLink("Switch"+str(i+4), "Switch"+str(i+7), 2, 4, **URLLC_user_plane_link_config)
-                self.addLink("Switch"+str(i+7), "Switch"+str(i+10), 3, 1, **URLLC_user_plane_link_config)
-                self.addLink("Switch"+str(i+10), "Switch"+str(i+13), 2, 2, **URLLC_control_plane_link_config)
-                self.addLink("Switch"+str(i+1), "Probe"+str(i+1), 4, 1)
+                self.addLink("BS"+str(i+1), "Switch"+str(i+1), user_bs[i]+1, 1, **URLLC_user_plane_link_config, delay='10ms')
+                self.addLink("Switch"+str(i+1), "Switch"+str(i+4), 3, 1, **URLLC_user_plane_link_config, delay='10ms')
+                self.addLink("Switch"+str(i+4), "Switch"+str(i+7), 2, 4, **URLLC_user_plane_link_config, delay='10ms')
+                self.addLink("Switch"+str(i+7), "Switch"+str(i+10), 3, 1, **URLLC_user_plane_link_config, delay='10ms')
+                self.addLink("Switch"+str(i+10), "Switch"+str(i+13), 2, 2, **URLLC_control_plane_link_config, delay='10ms')
+                self.addLink("Switch"+str(i+1), "Probe"+str(i+1), 4, 1, delay='2ms')
                 if i > 0: 
                     if self.slices[i] == self.slices[i-1]:
-                        self.addLink("Switch"+str(i+4), "Switch"+str(i), 4, 2, **URLLC_user_plane_link_config)
-                        self.addLink("Switch"+str(i+4), "Switch"+str(i+6), 3, 1, **URLLC_user_plane_link_config)
-                        self.addLink("Switch"+str(i+10), "Switch"+str(i+6), 4, 2, **URLLC_user_plane_link_config)
-                        self.addLink("Switch"+str(i+10), "Switch"+str(i+12), 3, 1, **URLLC_control_plane_link_config)
+                        self.addLink("Switch"+str(i+4), "Switch"+str(i), 4, 2, **URLLC_user_plane_link_config, delay='10ms')
+                        self.addLink("Switch"+str(i+4), "Switch"+str(i+6), 3, 1, **URLLC_user_plane_link_config, delay='10ms')
+                        self.addLink("Switch"+str(i+10), "Switch"+str(i+6), 4, 2, **URLLC_user_plane_link_config, delay='10ms')
+                        self.addLink("Switch"+str(i+10), "Switch"+str(i+12), 3, 1, **URLLC_control_plane_link_config, delay='10ms')
                     else:
                         self.addLink("Switch"+str(i+4), "Switch"+str(i), 4, 2)
                         self.addLink("Switch"+str(i+4), "Switch"+str(i+6), 3, 1)
                         self.addLink("Switch"+str(i+10), "Switch"+str(i+6), 4, 2)
                         self.addLink("Switch"+str(i+10), "Switch"+str(i+12), 3, 1)
-            
-        for user in self.users:
-            self.addHost(user["label"])
-            self.addLink(user["label"], user["base_station"], 1, 1)
-
+           
+        
+        """
+        for i in range(0, len(self.users), 2):
+            self.addHost(self.users[i])
+            self.addLink(self.users[i], self.users[i+1], i, (len(self.users)/2)+1 , delay='1ms')
+        """
 def reading_configuration(file_path):
     with open (file_path, "r") as file:
         conf_data = file.readlines()
-    
-    return conf_data[4].split("\"")[1]
+
+    user_base_station_configuration = []
+    for string in conf_data[5].split('\"')[0].split(' = ')[1].split(', '):
+        user_base_station_configuration.append(string)
+    user_basestations = []
+    for i in range(0, len(user_base_station_configuration)-1, 2):
+        user_basestations.append({'label': user_base_station_configuration[i], 'base_station': user_base_station_configuration[i+1]})
+
+    return conf_data[4].split("\"")[1], user_basestations
 
 def main():
-    users = [{"label":"user1", "base_station":"BS1"}, {"label":"user2", "base_station":"BS2"}, {"label":"user3", "base_station":"BS3"}]
+    #users = [{"label":"user1", "base_station":"BS1"}, {"label":"user2", "base_station":"BS2"}, {"label":"user3", "base_station":"BS3"}, {"label":"user4", "base_station":"BS2"}, {"label":"user5", "base_station":"BS3"}]
     #E = eMBB, M= mMTC, U = URLLC
-    slice_configuration = reading_configuration("/home/vagrant/params.conf")
+    slice_configuration, users = reading_configuration("/home/vagrant/params.conf")
+    print(users)
+    print(slice_configuration)
+    users[len(users)-1]["base_station"] = users[len(users)-1]["base_station"].rstrip("\n")
+    print(users)
     topology = MobileInfrastructure(slice_configuration, users)
     net = Mininet(
         topo=topology,

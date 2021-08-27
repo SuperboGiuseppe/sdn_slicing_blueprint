@@ -11,7 +11,6 @@ from ryu.lib.packet import ethernet
 from ryu.lib.packet import arp
 from ryu.lib.packet import ether_types
 
-import random
 
 
 class DirectionSlicing(app_manager.RyuApp):
@@ -22,9 +21,20 @@ class DirectionSlicing(app_manager.RyuApp):
 
         CONF = cfg.CONF
         CONF.register_opts([
-            cfg.StrOpt('slice_configuration', default='EEE', help = ('Configuration of the slices'))
+            cfg.StrOpt('slices_configuration', default='EEE', help = ('Configuration of the slices')),
+            cfg.ListOpt('users_configuration', default='', help = ('Json format of user list'))
         ])
-        self.slices = CONF.slice_configuration
+        self.slices = CONF.slices_configuration
+        self.users = CONF.users_configuration
+        self.user_basestations = []
+        for i in range(0, len(self.users)-1, 2):
+            self.user_basestations.append({'label': self.users[i], 'base_station': self.users[i+1]})
+
+        #print(self.user_basestations)
+        #print(self.user_basestations[0])
+
+        #print(self.users)
+
         #print(self.slices)
         # out_port = slice_to_port[dpid][in_port]
         #self.slice_to_port = {
@@ -55,7 +65,7 @@ class DirectionSlicing(app_manager.RyuApp):
                 self.slice_to_port[(i+10)] = {1: 2, 2: 1, 3: 0, 4: 0}
                 self.slice_to_port[(i+13)] = {1 :0, 2: 3, 3: 2}
                 if i > 0 and self.slices[i] == self.slices[i-1]:
-                    self.slice_to_port[(i+10)] = {1:[2, 3], 2:[1, 3], 3:[1, 2], 4:0}
+                    self.slice_to_port[(i+10)] = {1: [2, 3], 2:[1, 3], 3:[1, 2], 4: 0}
                     self.slice_to_port[(i+12)] = {1: [2, 3], 2: [1, 3], 3: [1, 2]}
                     self.slice_to_port[(i+13)] = {1: [2, 3], 2: [1, 3], 3: [1, 2]}
             if self.slices[i] == "U":
@@ -65,17 +75,88 @@ class DirectionSlicing(app_manager.RyuApp):
                 self.slice_to_port[(i+10)] = {1: 2, 2: 1, 3: 0, 4: 0}
                 self.slice_to_port[(i+13)] = {1 :2, 2: 0} 
                 if i > 0 and self.slices[i] == self.slices[i-1]:
-                        self.slice_to_port[(i)] = {1: [2, 4, 3], 2: [3, 1, 4], 3: [1, 2, 4], 4: [1, 2, 3]}
-                        self.slice_to_port[(i+1)] = {1: [2, 4, 3], 2: [3, 1, 4], 3: [1, 2, 4], 4: [1, 2, 3]}
-                        self.slice_to_port[(i+4)] =  {1 : 4, 2: 0, 3: 0, 4: 1}
+                    self.slice_to_port[(i)] = {1: [2, 4, 3], 2: [3, 1, 4], 3: [1, 2, 4], 4: [1, 2, 3]}
+                    self.slice_to_port[(i+1)] = {1: [2, 4, 3], 2: [3, 1, 4], 3: [1, 2, 4], 4: [1, 2, 3]}
+                    self.slice_to_port[(i+4)] =  {1 : 4, 2: 0, 3: 0, 4: 1}
                         
         
-        #Base stations ports configuration
-        self.slice_to_port[16] = {1:2, 2:1}
-        self.slice_to_port[17] = {1:2, 2:1}
-        self.slice_to_port[18] = {1:2, 2:1}
-    
+        #Base station 1 ports configuration with users
+        self.slice_to_port[16] = {}
+        users_bs1 = 0
+        temp_user_bs1=[]
+        for k in self.user_basestations:
+            if k.get('base_station') == 'BS1':
+                users_bs1 += 1
+                temp_user_bs1.append(users_bs1)
+                #self.slice_to_port[16][users_bs1] = 2
+            else:
+                users_bs1 += 0
+        if(len(temp_user_bs1) > 1):
+            self.slice_to_port[16][users_bs1 + 1] = temp_user_bs1
+        else:
+            self.slice_to_port[16][users_bs1 + 1] = users_bs1
+        if len(temp_user_bs1) > 1:
+            for user in temp_user_bs1:
+                self.slice_to_port[16][user] = [users_bs1+1]
+                for i in range(len(temp_user_bs1)):
+                    if temp_user_bs1[i] != user:
+                        self.slice_to_port[16][user].append(temp_user_bs1[i])
+        else:
+            self.slice_to_port[16][temp_user_bs1[0]] = users_bs1+1
 
+        #self.slice_to_port[16] = {1:2, 2:1}
+        
+        #Base station 2 ports configuration with users
+        self.slice_to_port[17] = {}
+        users_bs2 = 0
+        temp_user_bs2=[]
+        for k in self.user_basestations:
+            if k.get('base_station') == 'BS2':
+                users_bs2 += 1
+                temp_user_bs2.append(users_bs2)
+                #self.slice_to_port[16][users_bs1] = 2
+            else:
+                users_bs2 += 0
+        if(len(temp_user_bs2) > 1):
+            self.slice_to_port[17][users_bs2 + 1] = temp_user_bs2
+        else:
+            self.slice_to_port[17][users_bs2 + 1] = users_bs2
+        if len(temp_user_bs2) > 1:
+            for user in temp_user_bs2:
+                self.slice_to_port[17][user] = [users_bs2+1]
+                for i in range(len(temp_user_bs2)):
+                    if temp_user_bs2[i] != user:
+                        self.slice_to_port[17][user].append(temp_user_bs2[i])
+        else:
+            self.slice_to_port[17][temp_user_bs2[0]] = users_bs2+1
+        
+        #Base station 3 ports configuration with users
+        self.slice_to_port[18] = {}
+        users_bs3 = 0
+        temp_user_bs3=[]
+        for k in self.user_basestations:
+            if k.get('base_station') == 'BS3':
+                users_bs3 += 1
+                temp_user_bs3.append(users_bs3)
+                #self.slice_to_port[16][users_bs1] = 2
+            else:
+                users_bs3 += 0
+        if(len(temp_user_bs3) > 1):
+            self.slice_to_port[18][users_bs3 + 1] = temp_user_bs3
+        else:
+            self.slice_to_port[18][users_bs3 + 1] = users_bs3
+        if len(temp_user_bs3) > 1:
+            for user in temp_user_bs3:
+                self.slice_to_port[18][user] = [users_bs3+1]
+                for i in range(len(temp_user_bs3)):
+                    if temp_user_bs3[i] != user:
+                        self.slice_to_port[18][user].append(temp_user_bs3[i])
+        else:
+            self.slice_to_port[18][temp_user_bs3[0]] = users_bs3+1
+        #self.slice_to_port[18] = {1:2, 2:1}
+        print(self.slice_to_port[16])
+        print(self.slice_to_port[17])
+        print(self.slice_to_port[18])
     
 
 
