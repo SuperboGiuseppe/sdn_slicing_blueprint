@@ -154,9 +154,7 @@ class DirectionSlicing(app_manager.RyuApp):
         else:
             self.slice_to_port[18][temp_user_bs3[0]] = users_bs3+1
         #self.slice_to_port[18] = {1:2, 2:1}
-        print(self.slice_to_port[16])
-        print(self.slice_to_port[17])
-        print(self.slice_to_port[18])
+
     
 
 
