@@ -26,6 +26,7 @@ The project has been developed by using ComNetsEmu (https://www.granelli-lab.org
 ## 3) Infrastructure design and configuration
 By taking as reference the previously shown 5G network slicing high level diagram, the reference infrastructure for this project includes, 15 switches and 3 base stations, placed in the following way:
 ![Project infrastructure](images/base_infrastructure.png)
+
 9 of the 15 switches represent datacenters, virtually located in different distances from the base stations. The switches located in the far right are the most distant from the base stations.
 
 In the configuration file *params.conf* it is possible to set the following characteristics of the network:
